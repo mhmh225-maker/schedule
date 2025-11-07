@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>チケットぴゅあ</title>
+<style>
+body{margin:0;font-family:sans-serif;background:#fff0f8;color:#5b2a3b;}
+.container{max-width:900px;margin:30px auto;padding:15px;}
+h1{color:#ff7fbf;font-size:40px;margin-bottom:10px;}
+.step{display:none;padding:15px;border:1px solid #ffd6ea;border-radius:15px;margin-bottom:10px;background:#fff7fb;}
+h3{font-weight: normal; /* 標準の太さにする */}
+select,input[type=date],input[type=text],input[type=password],input[type=number]
+{width:100%;box-sizing: border-box;padding:15px;margin-bottom:10px;border:1px solid#b23a66;border-radius:15px;font-size:20px;}
+.btn{display:block;width:100%;padding:15px;margin-bottom:10px;border:none;border-radius:15px;background:#ff7fbf;color:#fff;cursor:pointer;font-size:20px;}
+.btn.ghost{background:#fff;border:1px solid #ffd6ea;color:#b23a66;font-size:20px;}
+.progress-bar{width:100%;height:6px;background:#ffe6f0;border-radius:15px;margin:10px 0;overflow:hidden;display:none;}
+.progress-bar-inner{width:0%;height:100%;background:#ff7fbf;}
+.hidden{display:none;}
+.tos{max-height:320px;overflow:auto;border:1px solid #ffe6f0;padding:15px;border-radius:15px;background:#fffafc;font-size:20px;color:#5b2a3b;margin-bottom:10px;}
+.summary{padding:15px;background:#ffeef7;border-radius:15px;margin-bottom:10px;font-size:20px;}
+.error{color:#c62653;font-size:20px;margin-bottom:10px;}
+</style>
+</head>   
+
+<body>
+<div class="container">
+<h1>チケットぴゅあ</h1>
+
+<!-- ステップ領域 -->
+<div id="step1" class="step"></div>
+<div class="progress-bar" id="progressBar"><div class="progress-bar-inner" id="progressInner"></div></div>
+
+<div id="step2" class="step"></div>
+<div id="step3" class="step"></div>
+<div id="step4" class="step"></div>
+<div id="step5" class="step"></div>
+<div id="step6" class="step"></div>
+<div id="step7" class="step"></div>
+<div id="step8" class="step"></div>
+<div id="step9" class="step"></div>
+<div id="step10" class="step"></div>
+<div id="step11" class="step"></div>
+
+<script>
+//タイム計測
+let startTime = 0;
+
+// --------------------------------------
+// データ
+// --------------------------------------
+const SHOWS = [
+  { title:"ピュアステージ2025", dates:["2026-11-09","2026-11-10"], valid:true },
+  { title:"イベントA", dates:["2026-11-09"], valid:false },
+  { title:"イベントB", dates:["2026-11-10"], valid:false }
+];
+
+const SEATS = [
+  { rank:"S席", price:8000 },
+  { rank:"A席", price:5000 },
+  { rank:"B席", price:3000 }
+];
+
+// ログイン情報（正解）
+const CORRECT_ID = "id";
+const CORRECT_PW = "pwd";
+
+const CORRECT_SELECTION = {
+  showTitle: 'ピュアステージ2025', // 正しい公演名
+  date: '2026-11-10',              // 正しい公演日
+  seat: 'S席'                       // 正しい座席
+};
+
+// 状態
+let selectedShow=null;
+let selectedDate=null;
+let selectedSeat=null;
+let isCorrect=true;
+
+// --------------------------------------
+function showStep(id){
+  document.querySelectorAll('.step').forEach(s=>s.style.display='none');
+  document.getElementById(id).style.display='block';
+}
+function showProgress(cb){
+  const bar=document.getElementById('progressBar');
+  const inner=document.getElementById('progressInner');
+  bar.style.display='block'; inner.style.width='0%';
+  let p=0; const dur=500+Math.random()*500, step=10/dur*100;
+  const t=setInterval(()=>{ p+=step; if(p>=100){p=100; clearInterval(t);} inner.style.width=p+'%'; },10);
+  setTimeout(()=>{ bar.style.display='none'; cb(); },dur);
+}
+
+// --------------------------------------
+//ステップ0：スタート画面
+function initStartPage(){
+  const s1 = document.getElementById('step1');
+  s1.innerHTML = `
+    <h2>チケットぴゅあ チャレンジ！</h2>
+    <h3>スタートを押すと計測開始します</h3>
+    <button class="btn" id="startBtn">スタート！</button>
+  `;
+
+  document.getElementById('startBtn').addEventListener('click', () => {
+    startTime = Date.now();   // ← 計測開始！
+    showProgress(() => {
+      initStep1();            // 元のステップ1を呼ぶ
+      showStep('step1');
+    });
+  });
+}
+
+// --------------------------------------
+// ステップ1：公演選択（初期）
+function initStep1(){
+  const s1=document.getElementById('step1');
+  s1.innerHTML="<h3>公演を選択してください</h3>";
+  SHOWS.forEach(show=>{
+    const btn=document.createElement('button');
+    btn.className='btn';
+    btn.textContent=show.title;
+    btn.onclick=()=>selectShow(show);
+    s1.appendChild(btn);
+  });
+}
+function selectShow(show){
+  selectedShow=show;
+  isCorrect=!!show.valid;
+  showProgress(()=>showStep("step2"));
+}
+
+// --------------------------------------
+// ステップ2：ログイン
+(function(){
+  const s2=document.getElementById('step2');
+  s2.innerHTML=`
+    <h2>ログイン</h2>
+    <div id="loginError" class="error"></div>
+    <input type="text" id="loginId" placeholder="ID">
+    <input type="password" id="loginPw" placeholder="パスワード">
+    <button class="btn" id="loginBtn">ログイン</button>
+    <button class="btn ghost" id="backTo1">戻る</button>`;
+  document.getElementById('backTo1').addEventListener('click',()=>showStep('step1'));
+  document.getElementById('loginBtn').addEventListener('click',goStep3);
+})();
+
+function goStep3(){
+  const id=document.getElementById('loginId').value;
+  const pw=document.getElementById('loginPw').value;
+  const error=document.getElementById('loginError');
+
+  if(id!==CORRECT_ID || pw!==CORRECT_PW){
+    error.textContent="ID またはパスワードが間違っています。";
+    return;
+  }
+  error.textContent="";
+  // 正常ログイン → 日付選択画面を「描画して」遷移する
+  showProgress(()=>{ renderStep3(); showStep('step3'); });
+}
+
+// --------------------------------------
+// ステップ3：公演日（描画）
+// --------------------------------------
+function renderStep3(){
+  const s3=document.getElementById('step3');
+  s3.innerHTML="<h2>公演日を選択</h2>";
+  // selectedShow が必ず存在（選択済み）なので安全に列挙
+  (selectedShow.dates || []).forEach(d=>{
+    const b=document.createElement('button');
+    b.className='btn';
+    b.textContent=d;
+    b.onclick=()=>{ selectedDate=d; showProgress(()=>{ renderStep4(); showStep('step4'); }); };
+    s3.appendChild(b);
+  });
+  const back=document.createElement('button');
+  back.className='btn ghost';
+  back.textContent='戻る';
+  back.onclick=()=>showStep('step2');
+  s3.appendChild(back);
+}
+
+// --------------------------------------
+// ステップ4：座席（描画）
+// --------------------------------------
+function renderStep4(){
+  const s4=document.getElementById('step4');
+  s4.innerHTML="<h2>座席を選択</h2>";
+  SEATS.forEach(seat=>{
+    const b=document.createElement('button');
+    b.className='btn';
+    b.textContent=`${seat.rank}（¥${seat.price}）`;
+    b.onclick=()=>{ selectedSeat=seat; showProgress(()=>{ renderStep5(); showStep('step5'); }); };
+    s4.appendChild(b);
+  });
+  const back=document.createElement('button');
+  back.className='btn ghost';
+  back.textContent='戻る';
+  back.onclick=()=>showStep('step3');
+  s4.appendChild(back);
+}
+
+function selectSeat(seat){
+  selectedSeat = seat;
+
+  // 正しい公演日・座席か判定
+  if(selectedDate !== CORRECT_SELECTION.date || seat !== CORRECT_SELECTION.seat || selectedShow !== CORRECT_SELECTION.showTitle){
+    alert('選択したチケットは正しくありません！');
+    // 間違った場合は確認ページに進ませず、座席選択画面に戻す
+    showStep('stepSeatSelection'); // stepSeatSelection は座席選択のステップID
+    return;
+  }
+
+  // 正しい場合は確認ページへ進む
+  showConfirmation();
+}
+
+// --------------------------------------
+// ステップ5：確認（描画）
+// --------------------------------------
+function renderStep5(){
+  const s5=document.getElementById('step5');
+  s5.innerHTML=`
+    <h2>内容確認</h2>
+    <div class="summary">
+      公演：${selectedShow.title}<br>
+      日付：${selectedDate}<br>
+      座席：${selectedSeat.rank}（¥${selectedSeat.price}）
+    </div>
+    <button class="btn" id="to6">確定へ</button>
+    <button class="btn ghost" id="backTo4">戻る</button>`;
+  document.getElementById('backTo4').addEventListener('click',()=>showStep('step4'));
+  document.getElementById('to6').addEventListener('click',()=>showProgress(()=>showStep('step6')));
+}
+
+// --------------------------------------
+// ステップ6：確定（静的）
+// --------------------------------------
+(function(){
+  const s6=document.getElementById('step6');
+  s6.innerHTML=`
+    <h2>確定</h2>
+    <h3>この内容で確定しますか？</h3>
+    <button class="btn" id="confirmYes">はい</button>
+    <button class="btn ghost" id="confirmBack">戻る</button>`;
+  document.getElementById('confirmBack').addEventListener('click',()=>showStep('step5'));
+  document.getElementById('confirmYes').addEventListener('click',()=>showProgress(()=>showStep('step7')));
+})();
+
+// --------------------------------------
+// ステップ7：支払い方法（静的）
+// --------------------------------------
+(function(){
+  const s7=document.getElementById('step7');
+  s7.innerHTML=`
+    <h2>支払い方法を選択</h2>
+    <button class="btn" id="payCard">クレジットカード</button>
+    <button class="btn ghost" id="payBack">戻る</button>`;
+  document.getElementById('payBack').addEventListener('click',()=>showStep('step6'));
+  document.getElementById('payCard').addEventListener('click',()=>showProgress(()=>{ renderStep8(); showStep('step8'); }));
+})();
+
+// --------------------------------------
+// ステップ8：クレカ入力（描画）
+// --------------------------------------
+function renderStep8(){
+  const s8=document.getElementById('step8');
+
+  s8.innerHTML=`
+    <h2>クレジットカード情報入力</h2>
+
+    <h3>カード番号</h3>
+    <input type="text" id="cardNum" placeholder="カード番号（例：123412341234）">
+
+    <h3>有効期限</h3>
+    <div style="display:flex; gap:10px; margin-bottom:12px;">
+      <input type="number" id="expMonth" placeholder="月（MM）" min="1" max="12" style="flex:1;">
+      <input type="number" id="expYear" placeholder="年（YY）" min="24" max="40" style="flex:1;">
+    </div>
+
+    <input type="text" id="cardSec" placeholder="セキュリティコード（例：123）">
+
+    <h3>カード名義</h3>
+    <div style="display:flex; gap:10px; margin-bottom:12px;">
+      <input type="text" id="nameLast" placeholder="姓（例：TARO）" style="flex:1;">
+      <input type="text" id="nameFirst" placeholder="名（例：YAMADA）" style="flex:1;">
+    </div>
+
+    <button class="btn" id="to9">次へ</button>
+    <button class="btn ghost" id="backTo7">戻る</button>
+  `;
+
+  document.getElementById('backTo7').addEventListener('click',()=>showStep('step7'));
+
+  document.getElementById('to9').addEventListener('click',()=>{
+      const num = document.getElementById('cardNum').value.trim();
+
+      const mm = document.getElementById('expMonth').value.padStart(2,'0');
+      const yy = document.getElementById('expYear').value.padStart(2,'0');
+      const exp = `${mm}/${yy}`;
+
+      const sec = document.getElementById('cardSec').value.trim();
+
+      const last = document.getElementById('nameLast').value.trim().toUpperCase();
+      const first = document.getElementById('nameFirst').value.trim().toUpperCase();
+      const name = `${last} ${first}`;
+
+      // 正解のカード情報
+      const CORRECT_CARD = {
+          num: "123456789012",
+          exp: "02/31",
+          sec: "123",
+          name: "TARO YAMADA"
+      };
+
+      // 一致チェック
+      if (
+          num !== CORRECT_CARD.num ||
+          exp !== CORRECT_CARD.exp ||
+          sec !== CORRECT_CARD.sec ||
+          name !== CORRECT_CARD.name
+      ) {
+          alert("カード情報が正しくありません。");
+          return;
+      }
+
+      showProgress(()=>{ renderStep9(); showStep('step9'); });
+  });
+}
+
+// --------------------------------------
+// ステップ9：最終確認（描画）
+// --------------------------------------
+function renderStep9(){
+  const s9=document.getElementById('step9');
+  s9.innerHTML=`
+    <h2>最終確認</h2>
+    <div class="summary">
+      公演：${selectedShow.title}<br>
+      日付：${selectedDate}<br>
+      座席：${selectedSeat.rank}<br>
+      支払い：クレジットカード
+    </div>
+    <button class="btn" id="to10">利用規約へ</button>
+    <button class="btn ghost" id="backTo8">戻る</button>`;
+  document.getElementById('backTo8').addEventListener('click',()=>showStep('step8'));
+  document.getElementById('to10').addEventListener('click',()=>showProgress(()=>{ renderStep10(); showStep('step10'); }));
+}
+
+// --------------------------------------
+// ステップ10：利用規約（スクロールで同意表示）
+// --------------------------------------
+function renderStep10(){
+  const s10=document.getElementById('step10');
+  s10.innerHTML=`<div class="tos" id="tosBox">
+    
+    <p>【チケット購入に関する利用規約】 <br><br>
+
+本利用規約（以下「本規約」といいます）は、株式会社チケットぴゅあ（以下「当社」といいます）が
+運営するチケット販売サービス（以下「本サービス」といいます）を利用する
+すべてのお客様（以下「利用者」といいます）に適用されるものです。<br>
+利用者は、本サービスを利用することにより、本規約に同意したものとみなします。<br>
+第1条（総則）<br>
+本規約は、本サービスにおけるチケット販売、購入、予約、入場、及びそれに付随するすべての行為に適用されます。<br>
+当社は、必要と判断した場合、利用者への事前の通知なく本規約を変更できるものとします。<br>
+本規約の変更後に利用者が本サービスを利用した場合、変更後の内容に同意したものとみなします。<br>
+第2条（チケットの購入）<br>
+利用者は、当社が定める方法によりチケットの購入手続きを行うものとします。<br>
+購入手続き完了後の変更・キャンセル・返金は、いかなる理由においても原則として受け付けません。<br>
+購入したチケットの転売、譲渡、オークションへの出品、及びこれに準ずる行為は禁止します。<br>
+転売されたチケットによる入場は無効とし、入場をお断りする場合があります。<br>
+第3条（支払い）<br>
+チケット代金、手数料、システム利用料、配送費等は、当社が別途定める方法により支払うものとします。<br>
+支払い方法に関してはクレジットカード決済、コンビニ決済、電子マネー等、当社が指定するものに限ります。<br>
+決済が正常に完了しない場合、当社は購入を無効とする権利を有します。<br>
+第4条（公演内容・変更・中止）<br>
+公演内容、出演者、会場、開演時間などは、主催者の都合により予告なく変更される場合があります。<br>
+公演の中止・延期が発生した場合、主催者の指示に従い、所定の方法で払戻しを行うことがあります。ただし、交通費・宿泊費・手数料等の補償は一切行いません。<br>
+天災地変、感染症拡大、機材トラブル、出演者の健康状態、その他不可抗力により公演が実施不能となった場合も、当社は一切の責任を負いません。<br>
+第5条（入場および観覧）<br>
+入場時には、購入者本人確認を行う場合があります。本人確認書類を提示できない場合、入場をお断りすることがあります。<br>
+会場内では、係員の指示に従ってください。従わない場合、退場していただく場合があります。<br>
+カメラ、録音機器、録画機器などによる撮影・録音・録画は禁止します。<br>
+会場内外で発生した事故・盗難・紛失・怪我等について、当社および主催者は一切責任を負いません。<br>
+第6条（禁止事項）<br>
+利用者は、以下の行為を行ってはなりません。<br>
+不正な手段によるチケット購入（複数アカウントの使用、自動購入ツール等）<br>
+当社または他の利用者に損害を与える行為 <br>
+公序良俗に反する行為 <br>
+本サービスの運営を妨げる行為 <br>
+虚偽の情報を登録・提供する行為 <br>
+第7条（個人情報の取り扱い）<br>
+当社は、利用者の個人情報を、個人情報保護方針に基づき適切に管理します。<br>
+チケット購入、本人確認、問い合わせ対応、及びマーケティング目的で、必要な範囲内において利用します。<br>
+第8条（免責事項）<br>
+当社は、本サービスに関して発生した利用者の損害について、当社の故意または重大な過失がない限り、一切の責任を負いません。<br>
+通信回線やシステム障害によりチケットが購入できなかった場合も、当社は責任を負いません。<br>
+利用者間または第三者との間で生じたトラブルについて、当社は関与いたしません。<br>
+第9条（準拠法・合意管轄）<br>
+本規約の解釈および適用にあたっては、日本法を準拠法とします。<br>
+本サービスに関して生じた紛争については、東京地方裁判所を第一審の専属的合意管轄裁判所とします。<br><br>
+附則<br>
+本規約は2025年10月23日より施行します。</p></div>
+    
+    <div id="agreeArea" class="hidden">
+      <h3><input type="checkbox" id="agree"> 同意する</h3>
+    </div>
+    <button class="btn" id="finalBuy">購入</button>
+    <button class="btn ghost" id="backTo9">戻る</button>`;
+
+  document.getElementById('backTo9').addEventListener('click',()=>showStep('step9'));
+  const tosBox = document.getElementById('tosBox');
+  tosBox.scrollTop = 0;
+  tosBox.addEventListener('scroll', function onScroll(){
+    if(tosBox.scrollTop + tosBox.clientHeight >= tosBox.scrollHeight - 4){
+      document.getElementById('agreeArea').classList.remove('hidden');
+      tosBox.removeEventListener('scroll', onScroll);
+    }
+  });
+  document.getElementById('finalBuy').addEventListener('click',completePurchase);
+}
+
+// --------------------------------------
+// ステップ11：完了（正誤判定）
+// --------------------------------------
+function completePurchase(){
+  const agree = document.getElementById('agree');
+  if(!agree || !agree.checked){
+    alert("利用規約に同意してください");
+    return;
+  }
+  showProgress(()=>{
+    const s11=document.getElementById('step11');
+if(!isCorrect){
+  s11.innerHTML=`
+    <h2 style="color:#c62653;">チケットが間違っています。</h2>
+    <button class="btn ghost" onclick="initAndGoStart()">最初に戻る</button>`;
+} else {
+  const clearTime = ((Date.now() - startTime) / 1000).toFixed(2);
+
+  s11.innerHTML=`
+    <h2 style="color:#c62653;">購入完了！</h2>
+    <h3>クリアタイム：${clearTime} 秒</h3>`;
+}
+    showStep('step11');
+  });
+}
+
+// 初期化＆開始
+initStartPage();
+showStep('step1');
+</script>
+</div>
+</body>
+</html>
