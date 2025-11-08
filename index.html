@@ -24,8 +24,7 @@
     .add-bottom{margin-top:10px}
     @media(max-width:920px){.grid{grid-template-columns:1fr}}
   </style>
- <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -66,248 +65,166 @@
 </div>
 
 <script>
-const rowsEl = document.getElementById("rows");
-const totalEl = document.getElementById("totalHours");
-const errorEl = document.getElementById("error");
-let chart = null;
+window.onload = () => {
+  const rowsEl = document.getElementById("rows");
+  const totalEl = document.getElementById("totalHours");
+  const errorEl = document.getElementById("error");
+  let chart = null;
 
-function hmToHours(t){ if(!t) return NaN; const [h,m]=t.split(":").map(Number); return h + (m||0)/60; }
-function hoursToHM(h){ const hh = Math.floor(h)%24; const mm = Math.round((h - Math.floor(h))*60); return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0'); }
+  const hmToHours = t => { if(!t) return NaN; const [h,m]=t.split(":").map(Number); return h + (m||0)/60; };
+  const hoursToHM = h => { const hh = Math.floor(h)%24; const mm = Math.round((h - Math.floor(h))*60); return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0'); };
+  const escapeHtml = s => String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 
-function escapeHtml(s){ return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'); }
+  function createRow(name='', start='00:00', end='01:00', memo=''){
+    const w = document.createElement('div');
+    w.className = 'rowWrapper';
+    w.innerHTML = `
+      <div class="row">
+        <input type="text" placeholder="活動名" value="${escapeHtml(name)}">
+        <input type="time" step="60" value="${start}">
+        <input type="time" step="60" value="${end}">
+        <button class="btn ghost">×</button>
+      </div>
+      <div class="memo"><textarea placeholder="メモ">${escapeHtml(memo)}</textarea></div>
+    `;
+    const btn = w.querySelector('button');
+    btn.onclick = () => { w.remove(); recalc(); };
 
-// createRow: start filled with prev end when adding at bottom
-function createRow(name='', start='00:00', end='01:00', memo=''){
-  const w = document.createElement('div');
-  w.className = 'rowWrapper';
-  w.innerHTML = `
-    <div class="row">
-      <input type="text" placeholder="活動名" value="${escapeHtml(name)}">
-      <input type="time" step="60" value="${start}">
-      <input type="time" step="60" value="${end}">
-      <button class="btn ghost">×</button>
-    </div>
-    <div class="memo"><textarea placeholder="メモ">${escapeHtml(memo)}</textarea></div>
-  `;
-  // remove button
-  w.querySelector('button').onclick = ()=>{ w.remove(); recalc(); };
+    rowsEl.appendChild(w);
+  }
 
-  // when an end time changes, copy it to the next row's start
-  const inputs = w.querySelectorAll('input[type=time]');
-  inputs.forEach(inp => inp.addEventListener('input', ()=>{
-    // if this is the end input, set next row start
-    const rowList = Array.from(document.querySelectorAll('.rowWrapper'));
-    const idx = rowList.indexOf(w);
-    // 0: start, 1: end
-    const startInput = w.querySelectorAll('input[type=time]')[0];
-    const endInput = w.querySelectorAll('input[type=time]')[1];
-    // when endInput changes, set next start if exists
-    endInput.addEventListener('input', ()=>{
-      const after = document.querySelectorAll('.rowWrapper')[idx+1];
-      if(after){
-        const nextStart = after.querySelectorAll('input[type=time]')[0];
-        // only overwrite if next start is empty or equals previous value
-        nextStart.value = endInput.value;
-        recalc();
+  function collect(){
+    const arr = [];
+    document.querySelectorAll('.rowWrapper').forEach(w=>{
+      const name = w.querySelector('input[type=text]').value.trim();
+      const times = w.querySelectorAll('input[type=time]');
+      let sVal = times[0].value; let eVal = times[1].value;
+      const memo = w.querySelector('textarea').value.trim();
+      if(!sVal || !eVal) return;
+      let s = hmToHours(sVal); let e = hmToHours(eVal);
+      if(eVal === '00:00') e = 24;
+      if(e <= s) e = e + 24;
+      const hours = e - s;
+      if(hours>0) arr.push({name: name||'(名称なし)', start:s%24, end:(s+hours)%24, hours, memo, sRaw:sVal, eRaw:eVal});
+    });
+    return arr;
+  }
+
+  function recalc(){
+    const data = collect();
+    const total = data.reduce((a,b)=>a+b.hours,0);
+    totalEl.textContent = total.toFixed(2);
+    errorEl.textContent = '';
+  }
+
+  function getColor(i){ return `hsl(${(i*47)%360} 70% 55%)`; }
+
+  function buildFullDaySegments(items){
+    const intervals = [];
+    items.forEach(it=>{
+      let s = it.sRaw ? hmToHours(it.sRaw) : it.start;
+      let e = it.eRaw ? hmToHours(it.eRaw) : (it.start + it.hours);
+      if(it.eRaw === '00:00') e = 24;
+      if(e <= s){
+        intervals.push({name:it.name, start:s, end:24, memo:it.memo, color:getColor(intervals.length)});
+        intervals.push({name:it.name, start:0, end:(e%24), memo:it.memo, color:getColor(intervals.length)});
+      } else {
+        intervals.push({name:it.name, start:s, end:e, memo:it.memo, color:getColor(intervals.length)});
       }
     });
-    recalc();
-  }));
-
-  // also when start changes, if previous row exists and its end is empty, set it
-  // (handled in add logic)
-
-  rowsEl.appendChild(w);
-}
-
-// collect items, handle wrapping 00:00 as 24
-function collect(){
-  const arr = [];
-  document.querySelectorAll('.rowWrapper').forEach(w=>{
-    const name = w.querySelector('input[type=text]').value.trim();
-    const times = w.querySelectorAll('input[type=time]');
-    let sVal = times[0].value; let eVal = times[1].value;
-    const memo = w.querySelector('textarea').value.trim();
-    if(!sVal || !eVal) return; // require both
-    let s = hmToHours(sVal); let e = hmToHours(eVal);
-    if(eVal === '00:00') e = 24;
-    if(e <= s) e = e + 24; // allow day wrap
-    const hours = e - s;
-    if(hours>0) arr.push({name: name||'(名称なし)', start:s%24, end:(s+hours)%24, hours, memo, sRaw:sVal, eRaw:eVal});
-  });
-  return arr;
-}
-
-function recalc(){
-  const data = collect();
-  const total = data.reduce((a,b)=>a+b.hours,0);
-  totalEl.textContent = total.toFixed(2);
-  errorEl.textContent = '';
-}
-
-function getColor(i){ return `hsl(${(i*47)%360} 70% 55%)`; }
-
-// Build full-day segments including gaps (filled with '空き' gray)
-function buildFullDaySegments(items){
-  // items: array with start in hours (0-24), end maybe wrapped
-  // convert to intervals on [0,24) possibly splitting wrapped ones
-  const intervals = [];
-  items.forEach(it=>{
-    let s = it.sRaw ? hmToHours(it.sRaw) : it.start;
-    let e = it.eRaw ? hmToHours(it.eRaw) : (it.start + it.hours);
-    if(it.eRaw === '00:00') e = 24;
-    if(e <= s) { // wrap
-      intervals.push({name:it.name, start:s, end:24, memo:it.memo, color:getColor(intervals.length)});
-      intervals.push({name:it.name, start:0, end:(e%24), memo:it.memo, color:getColor(intervals.length)});
-    } else {
-      intervals.push({name:it.name, start:s, end:e, memo:it.memo, color:getColor(intervals.length)});
-    }
-  });
-  // sort by start
-  intervals.sort((a,b)=>a.start - b.start);
-  // merge and fill gaps
-  const full = [];
-  let cursor = 0;
-  intervals.forEach(it=>{
-    if(it.start > cursor){
-      full.push({name:'空き', start:cursor, end:it.start, hours: it.start - cursor, memo:'', color:'#e0e0e0'});
-    }
-    full.push({name:it.name, start:it.start, end:it.end, hours: it.end - it.start, memo:it.memo, color:it.color});
-    cursor = it.end;
-  });
-  if(cursor < 24){ full.push({name:'空き', start:cursor, end:24, hours:24-cursor, memo:'', color:'#e0e0e0'}); }
-  return full;
-}
-
-function drawChart(){
-  const items = collect();
-  if(items.length === 0) return alert('データがありません');
-
-  const segments = buildFullDaySegments(items);
-  const labels = segments.map(s=>s.name);
-  const values = segments.map(s=>s.hours);
-  const colors = segments.map(s=>s.color);
-
-  if(chart) chart.destroy();
-  const ctx = document.getElementById('pieChart').getContext('2d');
-
-  // ticks plugin (0,3,6...)
-  const ticksPlugin = {
-    id: 'clockTicks',
-    afterDraw(chartInstance){
-      try{
-        const meta = chartInstance.getDatasetMeta(0);
-        if(!meta || !meta.data || meta.data.length===0) return;
-        const el = meta.data[0];
-        const cx = el.x || (chartInstance.chartArea.left + chartInstance.chartArea.right)/2;
-        const cy = el.y || (chartInstance.chartArea.top + chartInstance.chartArea.bottom)/2;
-        const r = el.outerRadius || Math.min(chartInstance.chartArea.width, chartInstance.chartArea.height)/2 * 0.8;
-        const ctx2 = chartInstance.ctx;
-        ctx2.save(); ctx2.fillStyle='#444'; ctx2.strokeStyle='#bbb'; ctx2.lineWidth=1; ctx2.font='12px sans-serif';
-        for(let h=0; h<24; h+=3){
-          const rad = (h/24)*2*Math.PI - Math.PI/2;
-          const x = cx + Math.cos(rad)*(r+4);
-          const y = cy + Math.sin(rad)*(r+4);
-          const x2 = cx + Math.cos(rad)*(r-6);
-          const y2 = cy + Math.sin(rad)*(r-6);
-          ctx2.beginPath(); ctx2.moveTo(x2,y2); ctx2.lineTo(x,y); ctx2.stroke();
-          const tx = cx + Math.cos(rad)*(r+28); const ty = cy + Math.sin(rad)*(r+28) + 4;
-          ctx2.fillText((h%24)+'時', tx-10, ty);
-        }
-        ctx2.restore();
-      } catch(e){ console.warn('ticks draw err', e); }
-    }
-  };
-
-  chart = new Chart(ctx, {
-    type: 'pie',
-    data: { labels, datasets: [{ data: values, backgroundColor: colors }] },
-    options: { responsive:true, plugins:{ legend:{display:false} } },
-    plugins: [ticksPlugin]
-  });
-
-  const legend = document.getElementById('legend'); legend.innerHTML = '';
-  segments.forEach((s,i)=>{
-    const row = document.createElement('div');
-    row.innerHTML = `<span class='colorbox' style='background:${s.color}'></span> ${s.name} — ${s.start.toFixed(2)}〜${s.end.toFixed(2)} (${s.hours.toFixed(2)}h)`;
-    legend.appendChild(row);
-  });
-}
-
-// when adding new row: set its start to last row's end
-function addRowAtBottom(){
-  const list = document.querySelectorAll('.rowWrapper');
-  let lastEnd = '';
-  if(list.length){
-    const last = list[list.length-1];
-    const endInput = last.querySelectorAll('input[type=time]')[1];
-    lastEnd = endInput ? endInput.value : '';
-  }
-  // default end = lastEnd + 1h
-  let defaultEnd = '';
-  if(lastEnd){
-    const h = hmToHours(lastEnd) + 1; defaultEnd = hoursToHM(h);
-  } else { defaultEnd = '01:00'; }
-  createRow('', lastEnd || '00:00', defaultEnd, '');
-  recalc();
-}
-
-// wire buttons
-document.getElementById('addBtn').addEventListener('click', addRowAtBottom);
-document.getElementById('clearBtn').addEventListener('click', ()=>{ rowsEl.innerHTML=''; recalc(); });
-document.getElementById('autoFill').addEventListener('click', ()=>{
-  rowsEl.innerHTML='';
-  createRow('睡眠','00:00','08:00','ぐっすり');
-  createRow('学習','09:00','15:00','授業');
-  createRow('仕事','15:00','19:00','バイト');
-  createRow('自由時間','19:00','24:00','趣味');
-  recalc();
-});
-
-document.getElementById('drawBtn').addEventListener('click', drawChart);
-
-// send
-document.getElementById('sendBtn').addEventListener('click', async ()=>{
-  const name = document.getElementById('username').value.trim();
-  if (!name) {
-    alert('名前を入力してください');
-    return;
-  }
-
-  // 追加: 送信用テキスト生成
-function makeMailText() {
-  const d = collect(); // 既存のcollect()を使う
-  let t = "24時間スケジュール\n-----------------------\n";
-  d.forEach(i => {
-    t += `${i.name}: ${i.sRaw}〜${i.eRaw} (${i.hours.toFixed(2)}h)\n`;
-    if(i.memo) t += `メモ: ${i.memo}\n`;
-  });
-  t += `\n合計: ${d.reduce((a,b)=>a+b.hours,0).toFixed(2)}時間`;
-  return t;
-}
-
-const scheduleText = makeMailText(); // ここでテキスト作成
-
-  const endpoint = "https://formspree.io/f/mzzknnkz";
-  const payload = { name: name, schedule: scheduleText };
-
-  try {
-    await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+    intervals.sort((a,b)=>a.start - b.start);
+    const full = [];
+    let cursor = 0;
+    intervals.forEach(it=>{
+      if(it.start > cursor) full.push({name:'空き', start:cursor, end:it.start, hours: it.start - cursor, memo:'', color:'#e0e0e0'});
+      full.push({name:it.name, start:it.start, end:it.end, hours: it.end - it.start, memo:it.memo, color:it.color});
+      cursor = it.end;
     });
-    alert("送信しました");
-  } catch(e){ alert("送信エラー: " + e); }
-});
+    if(cursor < 24) full.push({name:'空き', start:cursor, end:24, hours:24-cursor, memo:'', color:'#e0e0e0'});
+    return full;
+  }
 
+  function drawChart(){
+    const items = collect();
+    if(items.length === 0) return alert('データがありません');
 
-// initial sample
-createRow('睡眠','00:00','08:00','ぐっすり');
-createRow('学習','08:30','14:00','授業');
-createRow('自由時間','15:00','24:00','趣味');
-recalc();
+    const segments = buildFullDaySegments(items);
+    const labels = segments.map(s=>s.name);
+    const values = segments.map(s=>s.hours);
+    const colors = segments.map(s=>s.color);
+
+    if(chart) chart.destroy();
+    const ctx = document.getElementById('pieChart').getContext('2d');
+
+    chart = new Chart(ctx, {
+      type: 'pie',
+      data: { labels, datasets: [{ data: values, backgroundColor: colors }] },
+      options: { responsive:true, plugins:{ legend:{display:false} } }
+    });
+
+    const legend = document.getElementById('legend'); legend.innerHTML = '';
+    segments.forEach((s,i)=>{
+      const row = document.createElement('div');
+      row.innerHTML = `<span class='colorbox' style='background:${s.color}'></span> ${s.name} — ${s.start.toFixed(2)}〜${s.end.toFixed(2)} (${s.hours.toFixed(2)}h)`;
+      legend.appendChild(row);
+    });
+  }
+
+  function addRowAtBottom(){
+    const list = document.querySelectorAll('.rowWrapper');
+    let lastEnd = '';
+    if(list.length){
+      const last = list[list.length-1];
+      const endInput = last.querySelectorAll('input[type=time]')[1];
+      lastEnd = endInput ? endInput.value : '';
+    }
+    let defaultEnd = lastEnd ? hoursToHM(hmToHours(lastEnd)+1) : '01:00';
+    createRow('', lastEnd || '00:00', defaultEnd, '');
+    recalc();
+  }
+
+  async function sendSchedule(){
+    const name = document.getElementById('username').value.trim();
+    if (!name) { alert('名前を入力してください'); return; }
+
+    const d = collect();
+    let t = "24時間スケジュール\n-----------------------\n";
+    d.forEach(i => {
+      t += `${i.name}: ${i.sRaw}〜${i.eRaw} (${i.hours.toFixed(2)}h)\n`;
+      if(i.memo) t += `メモ: ${i.memo}\n`;
+    });
+    t += `\n合計: ${d.reduce((a,b)=>a+b.hours,0).toFixed(2)}時間`;
+
+    try {
+      await fetch("https://formspree.io/f/mzzknnkz", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({name, schedule:t})
+      });
+      alert("送信しました");
+    } catch(e){ alert("送信エラー: " + e); }
+  }
+
+  // イベント登録
+  document.getElementById('addBtn').addEventListener('click', addRowAtBottom);
+  document.getElementById('clearBtn').addEventListener('click', ()=>{ rowsEl.innerHTML=''; recalc(); });
+  document.getElementById('autoFill').addEventListener('click', ()=>{
+    rowsEl.innerHTML='';
+    createRow('睡眠','00:00','08:00','ぐっすり');
+    createRow('学習','09:00','15:00','授業');
+    createRow('仕事','15:00','19:00','バイト');
+    createRow('自由時間','19:00','24:00','趣味');
+    recalc();
+  });
+  document.getElementById('drawBtn').addEventListener('click', drawChart);
+  document.getElementById('sendBtn').addEventListener('click', sendSchedule);
+
+  // 初期データ
+  createRow('睡眠','00:00','08:00','ぐっすり');
+  createRow('学習','08:30','14:00','授業');
+  createRow('自由時間','15:00','24:00','趣味');
+  recalc();
+};
 </script>
 </body>
 </html>
-
