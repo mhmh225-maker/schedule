@@ -272,23 +272,25 @@ document.getElementById('sendBtn').addEventListener('click', async ()=>{
     alert('名前を入力してください');
     return;
   }
-
-  const items = collect();
-
-  let textLines = [];
-  textLines.push(`名前：${name}`);
-  textLines.push("");
-
-  items.forEach(it=>{
-    const s = it.sRaw;
-    const e = it.eRaw;
-    const hr = it.hours.toFixed(2);
-    textLines.push(`${it.name}: ${s}〜${e} (${hr}h)`);
-    if(it.memo){ textLines.push(`メモ: ${it.memo}`); }
-    textLines.push("");
+  
+// 追加: 送信用テキスト生成
+function makeMailText() {
+  const d = collect(); // 既存のcollect()を使う
+  let t = "24時間スケジュール\n-----------------------\n";
+  d.forEach(i => {
+    t += `${i.name}: ${i.sRaw}〜${i.eRaw} (${i.hours.toFixed(2)}h)\n`;
+    if(i.memo) t += `メモ: ${i.memo}\n`;
   });
+  t += `\n合計: ${d.reduce((a,b)=>a+b.hours,0).toFixed(2)}時間`;
+  return t;
+}
 
-  const scheduleText = textLines.join("\n");
+// 送信ボタン処理
+document.getElementById('sendBtn').addEventListener('click', async () => {
+  const name = document.getElementById('username').value.trim();
+  if (!name) { alert('名前を入力してください'); return; }
+
+  const scheduleText = makeMailText(); // ここでテキスト作成
 
   const endpoint = "https://formspree.io/f/mzzknnkz";
   const payload = { name: name, schedule: scheduleText };
@@ -311,4 +313,5 @@ recalc();
 </script>
 </body>
 </html>
+
 
