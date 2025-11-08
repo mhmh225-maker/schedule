@@ -279,7 +279,7 @@ function makeMailText() {
   let t = "24時間スケジュール\n-----------------------\n";
   d.forEach(i => {
     t += `${i.name}: ${i.sRaw}〜${i.eRaw} (${i.hours.toFixed(2)}h)\n`;
-    if(i.memo) t += `メモ: ${i.memo}\n`;
+    if(i.memo) t += `${i.memo}\n`;
   });
   t += `\n合計: ${d.reduce((a,b)=>a+b.hours,0).toFixed(2)}時間`;
   return t;
@@ -313,5 +313,6 @@ recalc();
 </script>
 </body>
 </html>
+
 
 
