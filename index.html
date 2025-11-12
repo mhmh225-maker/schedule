@@ -92,8 +92,11 @@
       .wrap{padding:10px; margin:10px;}
       .row{grid-template-columns: 1fr 80px 80px 30px;}
       .btn{padding:8px 12px; font-size:13px;}
-      input,textarea{font-size:13px; padding:8px;}
+      input,textarea{font-size:13px; padding:8px;} 
     }
+    canvas {
+  pointer-events: none;
+}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -232,3 +235,4 @@ function drawChart(){
         ctx2.save(); ctx2.fillStyle='#444'; ctx2.strokeStyle='#bbb'; ctx2.lineWidth=1; ctx2.font='12px sans-serif';
         for(let h=0; h<24; h+=3){
           const
+
