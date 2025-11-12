@@ -1,4 +1,4 @@
-<<!doctype html>
+<!doctype html>
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
@@ -38,9 +38,7 @@
       font-size:14px;
       color:var(--muted);
     }
-    .rowWrapper{
-      margin-bottom:8px;
-    }
+    .rowWrapper{ margin-bottom:8px; }
     .row{
       display:grid;
       grid-template-columns:1fr 110px 110px 40px;
@@ -82,15 +80,9 @@
       flex-wrap:wrap;
     }
     .colorbox{ width:14px; height:14px; border-radius:4px; flex-shrink:0; }
-    .controls{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      margin-bottom:10px;
-    }
+    .controls{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
     .add-bottom{ margin-top:10px; }
 
-    /* スマホ対応 */
     @media(max-width:920px){
       .grid{grid-template-columns:1fr; gap:12px;}
       aside.card{width:100%;}
@@ -116,11 +108,6 @@
 
   <div class="grid">
     <section class="card">
-      <div class="controls">
-        <button id="autoFill" class="btn ghost">サンプルで埋める</button>
-        <button id="clearBtn" class="btn ghost">クリア</button>
-      </div>
-
       <div id="rows"></div>
 
       <div class="add-bottom">
@@ -131,7 +118,6 @@
       <div id="error" style="color:red;font-size:13px;margin-top:4px"></div>
 
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-        <button id="drawBtn" class="btn">円グラフを描画</button>
         <button id="sendBtn" class="btn">送信</button>
       </div>
     </section>
@@ -146,17 +132,16 @@
 <script>
 const rowsEl = document.getElementById("rows");
 const totalEl = document.getElementById("totalHours");
-const errorEl = document.getElementById("error");
 let chart = null;
 
 function hmToHours(t){ if(!t) return NaN; const [h,m]=t.split(":").map(Number); return h + (m||0)/60; }
-function hoursToHM(h){ const hh = Math.floor(h)%24; const mm = Math.round((h - Math.floor(h))*60); return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0'); }
+function hoursToHM(h){ const hh=Math.floor(h)%24; const mm=Math.round((h - Math.floor(h))*60); return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0'); }
 function escapeHtml(s){ return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'); }
 
 function createRow(name='', start='00:00', end='01:00', memo=''){
-  const w = document.createElement('div');
-  w.className = 'rowWrapper';
-  w.innerHTML = `
+  const w=document.createElement('div');
+  w.className='rowWrapper';
+  w.innerHTML=`
     <div class="row">
       <input type="text" placeholder="活動名" value="${escapeHtml(name)}">
       <input type="time" step="60" value="${start}">
@@ -165,44 +150,47 @@ function createRow(name='', start='00:00', end='01:00', memo=''){
     </div>
     <div class="memo"><textarea placeholder="メモ">${escapeHtml(memo)}</textarea></div>
   `;
-  w.querySelector('button').onclick = ()=>{ w.remove(); recalc(); };
+  w.querySelector('button').onclick=()=>{ w.remove(); updateAll(); };
   rowsEl.appendChild(w);
-  recalc();
+  // 変更時にリアルタイム反映
+  w.querySelectorAll('input, textarea').forEach(el=>{
+    el.addEventListener('input', updateAll);
+  });
+  updateAll();
 }
 
 function collect(){
-  const arr = [];
+  const arr=[];
   document.querySelectorAll('.rowWrapper').forEach(w=>{
-    const name = w.querySelector('input[type=text]').value.trim();
-    const times = w.querySelectorAll('input[type=time]');
-    let sVal = times[0].value; let eVal = times[1].value;
-    const memo = w.querySelector('textarea').value.trim();
-    if(!sVal || !eVal) return;
-    let s = hmToHours(sVal); let e = hmToHours(eVal);
-    if(eVal === '00:00') e = 24;
-    if(e <= s) e = e + 24;
-    const hours = e - s;
+    const name=w.querySelector('input[type=text]').value.trim();
+    const times=w.querySelectorAll('input[type=time]');
+    let sVal=times[0].value; let eVal=times[1].value;
+    const memo=w.querySelector('textarea').value.trim();
+    if(!sVal||!eVal) return;
+    let s=hmToHours(sVal); let e=hmToHours(eVal);
+    if(eVal==='00:00') e=24;
+    if(e<=s) e=e+24;
+    const hours=e-s;
     if(hours>0) arr.push({name:name||'(名称なし)', start:s%24, end:(s+hours)%24, hours, memo, sRaw:sVal, eRaw:eVal});
   });
   return arr;
 }
 
 function recalc(){
-  const data = collect();
-  const total = data.reduce((a,b)=>a+b.hours,0);
-  totalEl.textContent = total.toFixed(2);
-  errorEl.textContent = '';
+  const data=collect();
+  const total=data.reduce((a,b)=>a+b.hours,0);
+  totalEl.textContent=total.toFixed(2);
 }
 
 function getColor(i){ return `hsl(${(i*47)%360} 70% 55%)`; }
 
 function buildFullDaySegments(items){
-  const intervals = [];
+  const intervals=[];
   items.forEach(it=>{
-    let s = it.sRaw ? hmToHours(it.sRaw) : it.start;
-    let e = it.eRaw ? hmToHours(it.eRaw) : (it.start + it.hours);
-    if(it.eRaw === '00:00') e = 24;
-    if(e <= s){
+    let s=it.sRaw?hmToHours(it.sRaw):it.start;
+    let e=it.eRaw?hmToHours(it.eRaw):(it.start+it.hours);
+    if(it.eRaw==='00:00') e=24;
+    if(e<=s){
       intervals.push({name:it.name,start:s,end:24,memo:it.memo,color:getColor(intervals.length)});
       intervals.push({name:it.name,start:0,end:(e%24),memo:it.memo,color:getColor(intervals.length)});
     }else{
@@ -221,112 +209,26 @@ function buildFullDaySegments(items){
 }
 
 function drawChart(){
-  const items = collect();
-  if(items.length === 0) return alert('データがありません');
-  const segments = buildFullDaySegments(items);
-  const labels = segments.map(s=>s.name);
-  const values = segments.map(s=>s.hours);
-  const colors = segments.map(s=>s.color);
+  const items=collect();
+  const segments=buildFullDaySegments(items);
+  const labels=segments.map(s=>s.name);
+  const values=segments.map(s=>s.hours);
+  const colors=segments.map(s=>s.color);
 
   if(chart) chart.destroy();
-  const ctx = document.getElementById('pieChart').getContext('2d');
+  const ctx=document.getElementById('pieChart').getContext('2d');
 
-  const ticksPlugin = {
+  const ticksPlugin={
     id:'clockTicks',
     afterDraw(chartInstance){
       try{
-        const meta = chartInstance.getDatasetMeta(0);
+        const meta=chartInstance.getDatasetMeta(0);
         if(!meta||!meta.data||meta.data.length===0) return;
-        const el = meta.data[0];
-        const cx = el.x || (chartInstance.chartArea.left+chartInstance.chartArea.right)/2;
-        const cy = el.y || (chartInstance.chartArea.top+chartInstance.chartArea.bottom)/2;
-        const r = el.outerRadius || Math.min(chartInstance.chartArea.width, chartInstance.chartArea.height)/2*0.8;
-        const ctx2 = chartInstance.ctx;
+        const el=meta.data[0];
+        const cx=el.x||(chartInstance.chartArea.left+chartInstance.chartArea.right)/2;
+        const cy=el.y||(chartInstance.chartArea.top+chartInstance.chartArea.bottom)/2;
+        const r=el.outerRadius||Math.min(chartInstance.chartArea.width,chartInstance.chartArea.height)/2*0.8;
+        const ctx2=chartInstance.ctx;
         ctx2.save(); ctx2.fillStyle='#444'; ctx2.strokeStyle='#bbb'; ctx2.lineWidth=1; ctx2.font='12px sans-serif';
         for(let h=0; h<24; h+=3){
-          const rad=(h/24)*2*Math.PI - Math.PI/2;
-          const x=cx + Math.cos(rad)*(r+4);
-          const y=cy + Math.sin(rad)*(r+4);
-          const x2=cx + Math.cos(rad)*(r-6);
-          const y2=cy + Math.sin(rad)*(r-6);
-          ctx2.beginPath(); ctx2.moveTo(x2,y2); ctx2.lineTo(x,y); ctx2.stroke();
-          const tx=cx + Math.cos(rad)*(r+28); const ty=cy + Math.sin(rad)*(r+28)+4;
-          ctx2.fillText((h%24)+'時', tx-10, ty);
-        }
-        ctx2.restore();
-      }catch(e){console.warn('ticks draw err',e);}
-    }
-  };
-
-  chart = new Chart(ctx,{
-    type:'pie',
-    data:{labels,datasets:[{data:values,backgroundColor:colors}]},
-    options:{responsive:true,plugins:{legend:{display:false}}},
-    plugins:[ticksPlugin]
-  });
-
-  const legend=document.getElementById('legend'); legend.innerHTML='';
-  segments.forEach((s,i)=>{
-    const row=document.createElement('div');
-    row.innerHTML=`<span class='colorbox' style='background:${s.color}'></span> ${s.name} — ${s.start.toFixed(2)}〜${s.end.toFixed(2)} (${s.hours.toFixed(2)}h)`;
-    legend.appendChild(row);
-  });
-}
-
-function addRowAtBottom(){
-  const list=document.querySelectorAll('.rowWrapper');
-  let lastEnd='';
-  if(list.length){
-    const last=list[list.length-1];
-    const endInput=last.querySelectorAll('input[type=time]')[1];
-    lastEnd=endInput?endInput.value:'';
-  }
-  let defaultEnd=lastEnd?hoursToHM(hmToHours(lastEnd)+1):'01:00';
-  createRow('', lastEnd||'00:00', defaultEnd, '');
-}
-
-document.getElementById('addBtn').addEventListener('click', addRowAtBottom);
-document.getElementById('clearBtn').addEventListener('click', ()=>{ rowsEl.innerHTML=''; recalc(); });
-document.getElementById('autoFill').addEventListener('click', ()=>{
-  rowsEl.innerHTML='';
-  createRow('睡眠','00:00','08:00','ぐっすり');
-  createRow('学習','08:30','14:00','授業');
-  createRow('自由時間','15:00','24:00','趣味');
-});
-document.getElementById('drawBtn').addEventListener('click', drawChart);
-
-function makeMailText(){
-  const d=collect();
-  let t="24時間スケジュール\n-----------------------\n";
-  d.forEach(i=>{
-    t+=`${i.name}: ${i.sRaw}〜${i.eRaw} (${i.hours.toFixed(2)}h)\n`;
-    if(i.memo) t+=`${i.memo}\n`;
-  });
-  t+=`\n合計: ${d.reduce((a,b)=>a+b.hours,0).toFixed(2)}時間`;
-  return t;
-}
-
-document.getElementById('sendBtn').addEventListener('click', async ()=>{
-  const name=document.getElementById('username').value.trim();
-  if(!name){ alert('名前を入力してください'); return; }
-  const scheduleText=makeMailText();
-  const endpoint="https://formspree.io/f/mzzknnkz";
-  const payload={name:name,schedule:scheduleText};
-  try{
-    await fetch(endpoint,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(payload)
-    });
-    alert("送信しました");
-  }catch(e){ alert("送信エラー: "+e); }
-});
-
-// 初期サンプル
-createRow('睡眠','00:00','08:00','ぐっすり');
-createRow('学習','08:30','14:00','授業');
-createRow('自由時間','15:00','24:00','趣味');
-recalc();
-</script>
-</body>
-</html>
+          const
