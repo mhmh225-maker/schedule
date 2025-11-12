@@ -82,6 +82,7 @@
     .colorbox{ width:14px; height:14px; border-radius:4px; flex-shrink:0; }
     .controls{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
     .add-bottom{ margin-top:10px; }
+    canvas { pointer-events:none; } /* ←クリック遮断防止 */
 
     @media(max-width:920px){
       .grid{grid-template-columns:1fr; gap:12px;}
@@ -92,11 +93,8 @@
       .wrap{padding:10px; margin:10px;}
       .row{grid-template-columns: 1fr 80px 80px 30px;}
       .btn{padding:8px 12px; font-size:13px;}
-      input,textarea{font-size:13px; padding:8px;} 
+      input,textarea{font-size:13px; padding:8px;}
     }
-    canvas {
-  pointer-events: none;
-}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -138,7 +136,6 @@ const totalEl = document.getElementById("totalHours");
 let chart = null;
 
 function hmToHours(t){ if(!t) return NaN; const [h,m]=t.split(":").map(Number); return h + (m||0)/60; }
-function hoursToHM(h){ const hh=Math.floor(h)%24; const mm=Math.round((h - Math.floor(h))*60); return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0'); }
 function escapeHtml(s){ return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'); }
 
 function createRow(name='', start='00:00', end='01:00', memo=''){
@@ -155,10 +152,7 @@ function createRow(name='', start='00:00', end='01:00', memo=''){
   `;
   w.querySelector('button').onclick=()=>{ w.remove(); updateAll(); };
   rowsEl.appendChild(w);
-  // 変更時にリアルタイム反映
-  w.querySelectorAll('input, textarea').forEach(el=>{
-    el.addEventListener('input', updateAll);
-  });
+  w.querySelectorAll('input, textarea').forEach(el=>el.addEventListener('input', updateAll));
   updateAll();
 }
 
@@ -167,10 +161,10 @@ function collect(){
   document.querySelectorAll('.rowWrapper').forEach(w=>{
     const name=w.querySelector('input[type=text]').value.trim();
     const times=w.querySelectorAll('input[type=time]');
-    let sVal=times[0].value; let eVal=times[1].value;
+    let sVal=times[0].value, eVal=times[1].value;
     const memo=w.querySelector('textarea').value.trim();
     if(!sVal||!eVal) return;
-    let s=hmToHours(sVal); let e=hmToHours(eVal);
+    let s=hmToHours(sVal), e=hmToHours(eVal);
     if(eVal==='00:00') e=24;
     if(e<=s) e=e+24;
     const hours=e-s;
@@ -220,19 +214,35 @@ function drawChart(){
 
   if(chart) chart.destroy();
   const ctx=document.getElementById('pieChart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets:[{ data: values, backgroundColor: colors }] },
+    options: {
+      plugins: { legend: { display:false } },
+      animation:false,
+      responsive:true
+    }
+  });
 
-  const ticksPlugin={
-    id:'clockTicks',
-    afterDraw(chartInstance){
-      try{
-        const meta=chartInstance.getDatasetMeta(0);
-        if(!meta||!meta.data||meta.data.length===0) return;
-        const el=meta.data[0];
-        const cx=el.x||(chartInstance.chartArea.left+chartInstance.chartArea.right)/2;
-        const cy=el.y||(chartInstance.chartArea.top+chartInstance.chartArea.bottom)/2;
-        const r=el.outerRadius||Math.min(chartInstance.chartArea.width,chartInstance.chartArea.height)/2*0.8;
-        const ctx2=chartInstance.ctx;
-        ctx2.save(); ctx2.fillStyle='#444'; ctx2.strokeStyle='#bbb'; ctx2.lineWidth=1; ctx2.font='12px sans-serif';
-        for(let h=0; h<24; h+=3){
-          const
+  // 凡例を更新
+  const legend=document.getElementById("legend");
+  legend.innerHTML='';
+  segments.forEach(s=>{
+    const div=document.createElement('div');
+    div.innerHTML=`<div class="colorbox" style="background:${s.color}"></div>${s.name} (${s.hours.toFixed(1)}h)`;
+    legend.appendChild(div);
+  });
+}
 
+function updateAll(){
+  recalc();
+  drawChart();
+}
+
+// 初期化
+document.getElementById("addBtn").onclick = () => createRow();
+document.getElementById("sendBtn").onclick = () => alert("送信ボタンが押されました！");
+createRow("睡眠", "00:00", "08:00");
+</script>
+</body>
+</html>
