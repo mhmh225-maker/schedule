@@ -2,247 +2,137 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>24時間スケジュール入力</title>
   <style>
-    :root{
-      --bg:#f7f7fb;
-      --card:#ffffff;
-      --accent:#6b5b95;
-      --muted:#666;
+    :root {
+      --bg: #f7f7fb;
+      --card: #fff;
+      --accent: #6b5b95;
+      --text: #333;
     }
-    body{
-      margin:0;
-      font-family:sans-serif;
-      background:var(--bg);
-      color:#111;
-    }
-    .wrap{
-      max-width:980px;
-      margin:28px auto;
-      padding:18px;
-    }
-    .grid{
-      display:grid;
-      grid-template-columns:1fr 420px;
-      gap:18px;
-      margin-top:18px;
-    }
-    .card{
-      background:var(--card);
-      border-radius:12px;
-      padding:14px;
-      box-shadow:0 6px 18px rgba(20,20,40,0.06);
-    }
-    label{
-      font-size:14px;
-      color:var(--muted);
-    }
-    .rowWrapper{ margin-bottom:8px; }
-    .row{
-      display:grid;
-      grid-template-columns:1fr 110px 110px 40px;
-      gap:8px;
-      align-items:center;
-    }
-    .memo{
-      grid-column:1 / -1;
-      margin-top:6px;
-    }
-    input,textarea{
-      padding:10px;
-      border-radius:8px;
-      border:1px solid #e6e6ee;
-      font-size:14px;
-      width:100%;
-      box-sizing:border-box;
-    }
-    textarea{ resize:vertical; height:70px; }
-    .btn{
-      background:var(--accent);
-      color:#fff;
-      padding:10px 16px;
-      border-radius:8px;
-      border:0;
-      cursor:pointer;
-      font-size:14px;
-    }
-    .btn.ghost{
-      background:transparent;
-      color:var(--accent);
-      border:1px solid rgba(107,91,149,0.3);
-    }
-    #legend div{
-      display:flex;
-      gap:8px;
-      font-size:13px;
-      margin-bottom:4px;
-      flex-wrap:wrap;
-    }
-    .colorbox{ width:14px; height:14px; border-radius:4px; flex-shrink:0; }
-    .controls{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
-    .add-bottom{ margin-top:10px; }
-    canvas { pointer-events:none; } /* ←クリック遮断防止 */
 
-    @media(max-width:920px){
-      .grid{grid-template-columns:1fr; gap:12px;}
-      aside.card{width:100%;}
-      canvas{max-width:100% !important; height:auto !important;}
+    body {
+      background: var(--bg);
+      font-family: "Segoe UI", sans-serif;
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
     }
-    @media(max-width:480px){
-      .wrap{padding:10px; margin:10px;}
-      .row{grid-template-columns: 1fr 80px 80px 30px;}
-      .btn{padding:8px 12px; font-size:13px;}
-      input,textarea{font-size:13px; padding:8px;}
+
+    h1 {
+      text-align: center;
+      color: var(--accent);
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      padding: 20px;
+      max-width: 600px;
+      margin: 20px auto;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 15px;
+      width: 100%;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    pre {
+      background: #eee;
+      padding: 10px;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      word-break: break-word;
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-<div class="wrap">
-  <h1>24時間の理想スケジュール</h1>
+  <h1>24時間スケジュール入力</h1>
 
-  <div class="card" style="margin-bottom:16px">
-    <label>あなたの名前</label>
-    <input id="username" type="text" placeholder="例：山田太郎">
+  <div class="card">
+    <label>項目名</label>
+    <input type="text" id="name" placeholder="例：授業・アルバイトなど" />
+
+    <label>開始時間（0〜24）</label>
+    <input type="number" id="start" min="0" max="24" step="0.5" />
+
+    <label>終了時間（0〜24）</label>
+    <input type="number" id="end" min="0" max="24" step="0.5" />
+
+    <button id="addBtn">追加する</button>
+    <button id="makeBtn">スケジュールを表示</button>
+
+    <pre id="output"></pre>
   </div>
 
-  <div class="grid">
-    <section class="card">
-      <div id="rows"></div>
+  <script>
+    const data = [];
 
-      <div class="add-bottom">
-        <button id="addBtn" class="btn ghost">＋ 項目追加</button>
-      </div>
+    document.getElementById("addBtn").addEventListener("click", () => {
+      const name = document.getElementById("name").value.trim();
+      const start = parseFloat(document.getElementById("start").value);
+      const end = parseFloat(document.getElementById("end").value);
 
-      <div style="margin-top:8px">合計: <strong id="totalHours">0</strong> 時間</div>
-      <div id="error" style="color:red;font-size:13px;margin-top:4px"></div>
+      if (!name || isNaN(start) || isNaN(end)) {
+        alert("全ての項目を入力してください。");
+        return;
+      }
+      if (end <= start) {
+        alert("終了時間は開始時間より後にしてください。");
+        return;
+      }
 
-      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-        <button id="sendBtn" class="btn">送信</button>
-      </div>
-    </section>
+      const hours = end - start;
+      data.push({ name, start, end, hours });
+      alert(`${name}（${hours}時間）を追加しました。`);
 
-    <aside class="card">
-      <canvas id="pieChart"></canvas>
-      <div id="legend" style="margin-top:10px"></div>
-    </aside>
-  </div>
-</div>
+      document.getElementById("name").value = "";
+      document.getElementById("start").value = "";
+      document.getElementById("end").value = "";
+    });
 
-<script>
-const rowsEl = document.getElementById("rows");
-const totalEl = document.getElementById("totalHours");
-let chart = null;
+    document.getElementById("makeBtn").addEventListener("click", () => {
+      if (data.length === 0) {
+        alert("まだスケジュールがありません。");
+        return;
+      }
 
-function hmToHours(t){ if(!t) return NaN; const [h,m]=t.split(":").map(Number); return h + (m||0)/60; }
-function escapeHtml(s){ return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'); }
+      let text = "24時間スケジュール\n----------------------\n";
+      data.forEach(i => {
+        text += `${i.name}: ${i.start}〜${i.end} (${i.hours.toFixed(2)}h)\n`;
+      });
+      text += "\n合計: " + data.reduce((a, b) => a + b.hours, 0).toFixed(2) + "時間";
 
-function createRow(name='', start='00:00', end='01:00', memo=''){
-  const w=document.createElement('div');
-  w.className='rowWrapper';
-  w.innerHTML=`
-    <div class="row">
-      <input type="text" placeholder="活動名" value="${escapeHtml(name)}">
-      <input type="time" step="60" value="${start}">
-      <input type="time" step="60" value="${end}">
-      <button class="btn ghost">×</button>
-    </div>
-    <div class="memo"><textarea placeholder="メモ">${escapeHtml(memo)}</textarea></div>
-  `;
-  w.querySelector('button').onclick=()=>{ w.remove(); updateAll(); };
-  rowsEl.appendChild(w);
-  w.querySelectorAll('input, textarea').forEach(el=>el.addEventListener('input', updateAll));
-  updateAll();
-}
-
-function collect(){
-  const arr=[];
-  document.querySelectorAll('.rowWrapper').forEach(w=>{
-    const name=w.querySelector('input[type=text]').value.trim();
-    const times=w.querySelectorAll('input[type=time]');
-    let sVal=times[0].value, eVal=times[1].value;
-    const memo=w.querySelector('textarea').value.trim();
-    if(!sVal||!eVal) return;
-    let s=hmToHours(sVal), e=hmToHours(eVal);
-    if(eVal==='00:00') e=24;
-    if(e<=s) e=e+24;
-    const hours=e-s;
-    if(hours>0) arr.push({name:name||'(名称なし)', start:s%24, end:(s+hours)%24, hours, memo, sRaw:sVal, eRaw:eVal});
-  });
-  return arr;
-}
-
-function recalc(){
-  const data=collect();
-  const total=data.reduce((a,b)=>a+b.hours,0);
-  totalEl.textContent=total.toFixed(2);
-}
-
-function getColor(i){ return `hsl(${(i*47)%360} 70% 55%)`; }
-
-function buildFullDaySegments(items){
-  const intervals=[];
-  items.forEach(it=>{
-    let s=it.sRaw?hmToHours(it.sRaw):it.start;
-    let e=it.eRaw?hmToHours(it.eRaw):(it.start+it.hours);
-    if(it.eRaw==='00:00') e=24;
-    if(e<=s){
-      intervals.push({name:it.name,start:s,end:24,memo:it.memo,color:getColor(intervals.length)});
-      intervals.push({name:it.name,start:0,end:(e%24),memo:it.memo,color:getColor(intervals.length)});
-    }else{
-      intervals.push({name:it.name,start:s,end:e,memo:it.memo,color:getColor(intervals.length)});
-    }
-  });
-  intervals.sort((a,b)=>a.start-b.start);
-  const full=[]; let cursor=0;
-  intervals.forEach(it=>{
-    if(it.start>cursor) full.push({name:'空き',start:cursor,end:it.start,hours:it.start-cursor,memo:'',color:'#e0e0e0'});
-    full.push({name:it.name,start:it.start,end:it.end,hours:it.end-it.start,memo:it.memo,color:it.color});
-    cursor=it.end;
-  });
-  if(cursor<24) full.push({name:'空き',start:cursor,end:24,hours:24-cursor,memo:'',color:'#e0e0e0'});
-  return full;
-}
-
-function drawChart(){
-  const items=collect();
-  const segments=buildFullDaySegments(items);
-  const labels=segments.map(s=>s.name);
-  const values=segments.map(s=>s.hours);
-  const colors=segments.map(s=>s.color);
-
-  if(chart) chart.destroy();
-  const ctx=document.getElementById('pieChart').getContext('2d');
-  chart = new Chart(ctx, {
-    type: 'doughnut',
-    data: { labels, datasets:[{ data: values, backgroundColor: colors }] },
-    options: {
-      plugins: { legend: { display:false } },
-      animation:false,
-      responsive:true
-    }
-  });
-
-  // 凡例を更新
-  const legend=document.getElementById("legend");
-  legend.innerHTML='';
-  segments.forEach(s=>{
-    const div=document.createElement('div');
-    div.innerHTML=`<div class="colorbox" style="background:${s.color}"></div>${s.name} (${s.hours.toFixed(1)}h)`;
-    legend.appendChild(div);
-  });
-}
-
-function updateAll(){
-  recalc();
-  drawChart();
-}
-
-// 初期化
-document.getElementById("addBtn").onclick = () => createRow();
-document.getElementById("sendBtn").onclick = () => alert("送信ボタンが押されました！");
-createRow("睡眠", "00:00", "08:00");
-</script>
+      document.getElementById("output").textContent = text;
+    });
+  </script>
 </body>
 </html>
