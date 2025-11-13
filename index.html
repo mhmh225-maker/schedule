@@ -96,7 +96,7 @@
 <body>
 <div class="wrap">
   <h1>バンドメンバー企画 "OFF MODE" <br>　
-    24時間 究極の休日スケジュール入力フォーム ver.0.1</h1>
+    24時間 究極の休日スケジュール入力フォーム ver.0.2</h1>
 
   <div class="card" style="margin-bottom:16px">
     <label>あなたの名前</label>
@@ -224,8 +224,8 @@ function updateChart(){
   const diff = Math.abs(total - 24);
   if (diff > 0.01) { // ±0.01h 誤差許容
     const msg = total < 24
-      ? `⚠ 合計時間が24時間に足りません (${total.toFixed(2)}h)`
-      : `⚠ 合計時間が24時間を超えています (${total.toFixed(2)}h)`;
+      ? `⚠ 合計時間が24時間に足りません！ (${total.toFixed(2)}h)`
+      : `⚠ 合計時間が24時間を超えています！ (${total.toFixed(2)}h)`;
     errorEl.textContent += (errorEl.textContent ? "／" : "") + msg;
   }
 
@@ -291,7 +291,7 @@ document.getElementById('sendBtn').addEventListener('click', async ()=>{
 
   // 🚫 エラーが出てるとき送信ストップ
   if (errorEl.textContent.trim() !== "") {
-    alert("エラーを修正してから送信してください！");
+    alert("合計時間が24時間ぴったりではありません！");
     return;
   }
 
@@ -317,7 +317,7 @@ document.getElementById('sendBtn').addEventListener('click', async ()=>{
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify(payload)
     });
-    alert("送信しました");
+    alert("送信しました！ご回答ありがとうございました！");
   }catch(e){ 
     alert("送信エラー: "+e); 
   }
@@ -333,6 +333,7 @@ updateChart();
 </script>
 </body>
 </html>
+
 
 
 
