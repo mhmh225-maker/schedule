@@ -96,7 +96,7 @@
 <body>
 <div class="wrap">
   <h1>バンドメンバー企画 "OFF MODE" <br>　
-    24時間 究極の休日スケジュール入力フォーム ver.0.1</h1>
+    24時間 究極の休日スケジュール入力フォーム ver.0.２</h1>
 
   <div class="card" style="margin-bottom:16px">
     <label>あなたの名前</label>
@@ -204,6 +204,13 @@ function updateChart(){
   errorEl.textContent = ""; // 一旦リセット
 
   // --- ① 開始時刻＝終了時刻 のチェック ---
+function updateChart(){
+  const data = collect();
+  const total = data.reduce((a,b)=>a+b.hours,0);
+  const errorEl = document.getElementById("error");
+  errorEl.textContent = ""; // 一旦リセット
+
+  // --- ① 開始時刻＝終了時刻 のチェック ---
   const invalids = [];
   document.querySelectorAll('.rowWrapper').forEach((w, idx) => {
     const times = w.querySelectorAll('input[type=time]');
@@ -230,10 +237,7 @@ function updateChart(){
   // --- 合計時間表示更新 ---
   totalEl.textContent = total.toFixed(2);
 
-  // --- エラーがある場合はチャート更新をスキップ ---
-  if (invalids.length > 0 || diff > 0.01) return;
-
-  // --- グラフ更新 ---
+  // --- グラフは常に更新 ---
   const segments = buildFullDaySegments(data);
   const labels = segments.map(s=>s.name);
   const values = segments.map(s=>s.hours);
