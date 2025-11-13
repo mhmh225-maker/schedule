@@ -96,7 +96,7 @@
 <body>
 <div class="wrap">
   <h1>バンドメンバー企画 "OFF MODE" <br>　
-    24時間 究極の休日スケジュール入力フォーム ver.0.3</h1>
+    24時間 究極の休日スケジュール入力フォーム ver.0.4</h1>
 
   <div class="card" style="margin-bottom:16px">
     <label>あなたの名前</label>
@@ -198,10 +198,12 @@ function getColor(i){ return `hsl(${(i*47)%360} 70% 55%)`; }
 
 // ↓ ここに置き換える！
 function updateChart(){
-  const data = collect();
+  const data = collect(); // ユーザー入力のみ
 
-  const segments = buildFullDaySegments(data);
-  const total = segments.reduce((a,b)=>a+b.hours,0);
+  const segments = buildFullDaySegments(data); // 空き時間も含めた全セグメント
+
+  // --- 空き時間を除いた合計時間 ---
+  const totalUserTime = data.reduce((a,b)=>a+b.hours,0);
 
   const errorEl = document.getElementById("error");
   const totalEl = document.getElementById("totalHours");
@@ -213,22 +215,23 @@ function updateChart(){
     errorEl.textContent = "⚠ 空き時間があります。24時間すべて埋めてください。";
   }
 
-  // --- 合計時間チェック（24hぴったりかどうか） ---
-  const diff = Math.abs(total - 24);
+  // --- 合計時間チェック（24hぴったりかどうか、空きも含む） ---
+  const totalAll = segments.reduce((a,b)=>a+b.hours,0);
+  const diff = Math.abs(totalAll - 24);
   if (diff > 0.01) {
-    const msg = total < 24
-      ? `⚠ 合計時間が24時間に足りません (${total.toFixed(2)}h)`
-      : `⚠ 合計時間が24時間を超えています (${total.toFixed(2)}h)`;
+    const msg = totalAll < 24
+      ? `⚠ 合計時間が24時間に足りません (${totalAll.toFixed(2)}h)`
+      : `⚠ 合計時間が24時間を超えています (${totalAll.toFixed(2)}h)`;
     errorEl.textContent += (errorEl.textContent ? "／" : "") + msg;
   }
 
-  // 合計時間表示
-  totalEl.textContent = total.toFixed(2);
+  // --- 合計時間表示（空き時間を除く） ---
+  totalEl.textContent = totalUserTime.toFixed(2);
 
   // --- グラフ更新（空き時間だけ黒） ---
   const labels = segments.map(s=>s.name);
   const values = segments.map(s=>s.hours);
-  const colors = segments.map(s => s.name === '空き' ? 'black' : s.color); // 空きだけ黒
+  const colors = segments.map(s => s.name === '空き' ? 'black' : s.color);
 
   if(chart) chart.destroy();
   const ctx = document.getElementById('pieChart').getContext('2d');
@@ -238,7 +241,7 @@ function updateChart(){
     options:{responsive:true,plugins:{legend:{display:false}}}
   });
 
-  // 凡例表示
+  // --- 凡例表示 ---
   const legend=document.getElementById('legend');
   legend.innerHTML='';
   segments.forEach((s,i)=>{
@@ -247,8 +250,6 @@ function updateChart(){
     legend.appendChild(row);
   });
 }
-
-
 
 
 function addRowAtBottom(){
@@ -326,6 +327,7 @@ updateChart();
 </script>
 </body>
 </html>
+
 
 
 
