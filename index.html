@@ -39,9 +39,10 @@
       color:var(--muted);
     }
     .rowWrapper{ margin-bottom:8px; }
+    /* ← 行動と時間の順を入れ替え */
     .row{
       display:grid;
-      grid-template-columns:1fr 110px 110px 40px;
+      grid-template-columns:110px 110px 1fr 40px;
       gap:8px;
       align-items:center;
     }
@@ -85,7 +86,7 @@
     }
     @media(max-width:480px){
       .wrap{padding:10px; margin:10px;}
-      .row{grid-template-columns: 1fr 80px 80px 30px;}
+      .row{grid-template-columns:80px 80px 1fr 30px;}
       .btn{padding:8px 12px; font-size:13px;}
       input,textarea{font-size:13px; padding:8px;}
     }
@@ -138,9 +139,9 @@ function createRow(name='', start='00:00', end='01:00', memo=''){
   w.className = 'rowWrapper';
   w.innerHTML = `
     <div class="row">
-      <input type="text" placeholder="行動" value="${escapeHtml(name)}">
       <input type="time" step="60" value="${start}">
       <input type="time" step="60" value="${end}">
+      <input type="text" placeholder="行動" value="${escapeHtml(name)}">
       <button class="btn ghost">×</button>
     </div>
     <div class="memo"><textarea placeholder="詳細">${escapeHtml(memo)}</textarea></div>
@@ -154,8 +155,8 @@ function createRow(name='', start='00:00', end='01:00', memo=''){
 function collect(){
   const arr = [];
   document.querySelectorAll('.rowWrapper').forEach(w=>{
-    const name = w.querySelector('input[type=text]').value.trim();
     const times = w.querySelectorAll('input[type=time]');
+    const name = w.querySelector('input[type=text]').value.trim();
     let sVal = times[0].value; let eVal = times[1].value;
     const memo = w.querySelector('textarea').value.trim();
     if(!sVal || !eVal) return;
@@ -216,7 +217,7 @@ function updateChart(){
   const legend=document.getElementById('legend'); legend.innerHTML='';
   segments.forEach((s,i)=>{
     const row=document.createElement('div');
-    row.innerHTML=`<span class='colorbox' style='background:${s.color}'></span> ${s.name} — ${s.start.toFixed(2)}〜${s.end.toFixed(2)} (${s.hours.toFixed(2)}h)`;
+    row.innerHTML=`<span class='colorbox' style='background:${s.color}'></span> ${s.start.toFixed(2)}〜${s.end.toFixed(2)} — ${s.name} (${s.hours.toFixed(2)}h)`;
     legend.appendChild(row);
   });
 }
@@ -240,7 +241,7 @@ function makeMailText(){
   const d=collect();
   let t="24時間スケジュール\n-----------------------\n";
   d.forEach(i=>{
-    t+=`${i.name}: ${i.sRaw}〜${i.eRaw} (${i.hours.toFixed(2)}h)\n`;
+    t+=`${i.sRaw}〜${i.eRaw}：${i.name} (${i.hours.toFixed(2)}h)\n`;
     if(i.memo) t+=`${i.memo}\n`;
   });
   t+=`\n合計: ${d.reduce((a,b)=>a+b.hours,0).toFixed(2)}時間`;
@@ -272,4 +273,3 @@ updateChart();
 </script>
 </body>
 </html>
-
