@@ -280,7 +280,16 @@ function makeMailText(){
 
 document.getElementById('sendBtn').addEventListener('click', async ()=>{
   const name=document.getElementById('username').value.trim();
+  const errorEl=document.getElementById('error');
+
+  // 🚫 エラーが出てたら送信中止
+  if (errorEl.textContent.trim() !== "") {
+    alert("エラーを修正してから送信してください！");
+    return;
+  }
+
   if(!name){ alert('名前を入力してください'); return; }
+
   const scheduleText=makeMailText();
   const endpoint="https://formspree.io/f/mzzknnkz";
   const payload={name:name,schedule:scheduleText};
@@ -294,6 +303,7 @@ document.getElementById('sendBtn').addEventListener('click', async ()=>{
   }catch(e){ alert("送信エラー: "+e); }
 });
 
+
 // 初期サンプル
 createRow('睡眠','00:00','08:00','ぐっすり');
 createRow('学習','08:30','14:00','授業');
@@ -303,6 +313,7 @@ updateChart();
 </script>
 </body>
 </html>
+
 
 
 
