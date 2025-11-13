@@ -196,11 +196,40 @@ function buildFullDaySegments(items){
 
 function getColor(i){ return `hsl(${(i*47)%360} 70% 55%)`; }
 
+// ↓ ここに置き換える！
 function updateChart(){
   const data = collect();
   const total = data.reduce((a,b)=>a+b.hours,0);
+  const errorEl = document.getElementById("error");
+  errorEl.textContent = ""; // 一旦クリア
+
+  // --- ① 開始時刻＝終了時刻 のチェック ---
+  const invalids = [];
+  document.querySelectorAll('.rowWrapper').forEach((w, idx) => {
+    const times = w.querySelectorAll('input[type=time]');
+    const sVal = times[0].value;
+    const eVal = times[1].value;
+    if (sVal && eVal && sVal === eVal) {
+      invalids.push(idx + 1);
+    }
+  });
+
+  if (invalids.length > 0) {
+    errorEl.textContent = `⚠ 同じ開始・終了時刻の項目があります（#${invalids.join(', ')}）`;
+  }
+
+  // --- ② 合計時間が24時間超えたら警告 ---
+  if (total > 24) {
+    errorEl.textContent += (errorEl.textContent ? "／" : "") + `⚠ 合計時間が24時間を超えています (${total.toFixed(2)}h)`;
+  }
+
+  // 合計時間を表示
   totalEl.textContent = total.toFixed(2);
 
+  // もしエラーがあったらチャート更新をスキップ
+  if (invalids.length > 0 || total > 24) return;
+
+  // --- グラフ更新処理 ---
   const segments = buildFullDaySegments(data);
   const labels = segments.map(s=>s.name);
   const values = segments.map(s=>s.hours);
@@ -274,6 +303,7 @@ updateChart();
 </script>
 </body>
 </html>
+
 
 
 
