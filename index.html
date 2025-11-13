@@ -96,7 +96,7 @@
 <body>
 <div class="wrap">
   <h1>バンドメンバー企画 "OFF MODE" <br>　
-    24時間 究極の休日スケジュール入力フォーム ver.0.4</h1>
+    24時間 究極の休日スケジュール入力フォーム ver.0.5</h1>
 
   <div class="card" style="margin-bottom:16px">
     <label>あなたの名前</label>
@@ -200,28 +200,27 @@ function getColor(i){ return `hsl(${(i*47)%360} 70% 55%)`; }
 function updateChart(){
   const data = collect(); // ユーザー入力のみ
 
-  const segments = buildFullDaySegments(data); // 空き時間も含めた全セグメント
+  const segments = buildFullDaySegments(data); // 空き時間も含めた全セグメント（グラフ用）
 
-  // --- 空き時間を除いた合計時間 ---
+  // --- ユーザー入力のみの合計時間 ---
   const totalUserTime = data.reduce((a,b)=>a+b.hours,0);
 
   const errorEl = document.getElementById("error");
   const totalEl = document.getElementById("totalHours");
   errorEl.textContent = ""; // 一旦リセット
 
-  // --- 空き時間チェック ---
+  // --- 空き時間チェック（送信不可用） ---
   const hasEmpty = segments.some(s => s.name === '空き');
   if (hasEmpty) {
     errorEl.textContent = "⚠ 空き時間があります。24時間すべて埋めてください。";
   }
 
-  // --- 合計時間チェック（24hぴったりかどうか、空きも含む） ---
-  const totalAll = segments.reduce((a,b)=>a+b.hours,0);
-  const diff = Math.abs(totalAll - 24);
+  // --- 合計時間チェック（空き時間除外、24hチェック用） ---
+  const diff = Math.abs(totalUserTime - 24);
   if (diff > 0.01) {
-    const msg = totalAll < 24
-      ? `⚠ 合計時間が24時間に足りません (${totalAll.toFixed(2)}h)`
-      : `⚠ 合計時間が24時間を超えています (${totalAll.toFixed(2)}h)`;
+    const msg = totalUserTime < 24
+      ? `⚠ 合計時間が24時間に足りません (${totalUserTime.toFixed(2)}h)`
+      : `⚠ 合計時間が24時間を超えています (${totalUserTime.toFixed(2)}h)`;
     errorEl.textContent += (errorEl.textContent ? "／" : "") + msg;
   }
 
@@ -327,6 +326,7 @@ updateChart();
 </script>
 </body>
 </html>
+
 
 
 
