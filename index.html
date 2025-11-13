@@ -199,23 +199,20 @@ function getColor(i){ return `hsl(${(i*47)%360} 70% 55%)`; }
 // ↓ ここに置き換える！
 function updateChart(){
   const data = collect(); // ユーザー入力のみ
+  const segments = buildFullDaySegments(data); // 空き時間含む全セグメント
 
-  const segments = buildFullDaySegments(data); // 空き時間も含めた全セグメント（グラフ用）
-
-  // --- ユーザー入力のみの合計時間 ---
   const totalUserTime = data.reduce((a,b)=>a+b.hours,0);
-
   const errorEl = document.getElementById("error");
   const totalEl = document.getElementById("totalHours");
-  errorEl.textContent = ""; // 一旦リセット
+  errorEl.textContent = "";
 
-  // --- 空き時間チェック（送信不可用） ---
+  // --- 空き時間チェック ---
   const hasEmpty = segments.some(s => s.name === '空き');
   if (hasEmpty) {
     errorEl.textContent = "⚠ 空き時間があります。24時間すべて埋めてください。";
   }
 
-  // --- 合計時間チェック（空き時間除外、24hチェック用） ---
+  // --- 合計時間チェック（空き時間除外） ---
   const diff = Math.abs(totalUserTime - 24);
   if (diff > 0.01) {
     const msg = totalUserTime < 24
@@ -224,13 +221,12 @@ function updateChart(){
     errorEl.textContent += (errorEl.textContent ? "／" : "") + msg;
   }
 
-  // --- 合計時間表示（空き時間を除く） ---
   totalEl.textContent = totalUserTime.toFixed(2);
 
-  // --- グラフ更新（空き時間だけ黒） ---
+  // --- グラフの色設定（空き時間だけグレー） ---
   const labels = segments.map(s=>s.name);
   const values = segments.map(s=>s.hours);
-  const colors = segments.map(s => s.name === '空き' ? 'black' : s.color);
+  const colors = segments.map(s => s.name === '空き' ? '#999' : s.color);
 
   if(chart) chart.destroy();
   const ctx = document.getElementById('pieChart').getContext('2d');
@@ -244,8 +240,13 @@ function updateChart(){
   const legend=document.getElementById('legend');
   legend.innerHTML='';
   segments.forEach((s,i)=>{
+    const box = document.createElement('span');
+    box.className = 'colorbox';
+    box.style.background = s.name === '空き' ? '#999' : s.color;
+
     const row=document.createElement('div');
-    row.innerHTML=`<span class='colorbox' style='background:${s.name === '空き' ? 'black' : s.color}'></span> ${s.start.toFixed(2)}〜${s.end.toFixed(2)} — ${s.name} (${s.hours.toFixed(2)}h)`;
+    row.appendChild(box);
+    row.innerHTML += ` ${s.start.toFixed(2)}〜${s.end.toFixed(2)} — ${s.name} (${s.hours.toFixed(2)}h)`;
     legend.appendChild(row);
   });
 }
@@ -326,3 +327,4 @@ updateChart();
 </script>
 </body>
 </html>
+
