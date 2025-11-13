@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>24時間スケジュール入力</title>
+  <title>バンドメンバー企画”OFF MODE”<br>
+    24時間 究極の休日スケジュール入力フォーム</title>
   <style>
     :root{
       --bg:#f7f7fb;
@@ -138,12 +139,12 @@ function createRow(name='', start='00:00', end='01:00', memo=''){
   w.className = 'rowWrapper';
   w.innerHTML = `
     <div class="row">
-      <input type="text" placeholder="活動名" value="${escapeHtml(name)}">
+      <input type="text" placeholder="行動" value="${escapeHtml(name)}">
       <input type="time" step="60" value="${start}">
       <input type="time" step="60" value="${end}">
       <button class="btn ghost">×</button>
     </div>
-    <div class="memo"><textarea placeholder="メモ">${escapeHtml(memo)}</textarea></div>
+    <div class="memo"><textarea placeholder="詳細">${escapeHtml(memo)}</textarea></div>
   `;
   w.querySelector('button').onclick = ()=>{ w.remove(); updateChart(); };
   w.querySelectorAll('input,textarea').forEach(el => el.addEventListener('input', updateChart));
@@ -262,6 +263,12 @@ document.getElementById('sendBtn').addEventListener('click', async ()=>{
     alert("送信しました");
   }catch(e){ alert("送信エラー: "+e); }
 });
+
+// 初期サンプル
+createRow('睡眠','00:00','08:00','ぐっすり');
+createRow('学習','08:30','14:00','授業');
+createRow('自由時間','15:00','24:00','趣味');
+updateChart();
 
 </script>
 </body>
