@@ -96,7 +96,7 @@
 <body>
 <div class="wrap">
   <h1>バンドメンバー企画 "OFF MODE" <br>　
-    24時間 究極の休日スケジュール入力フォーム ver.0.2</h1>
+    24時間 究極の休日スケジュール入力フォーム ver.0.3</h1>
 
   <div class="card" style="margin-bottom:16px">
     <label>あなたの名前</label>
@@ -199,62 +199,55 @@ function getColor(i){ return `hsl(${(i*47)%360} 70% 55%)`; }
 // ↓ ここに置き換える！
 function updateChart(){
   const data = collect();
-  const total = data.reduce((a,b)=>a+b.hours,0);
+
+  const segments = buildFullDaySegments(data);
+  const total = segments.reduce((a,b)=>a+b.hours,0);
 
   const errorEl = document.getElementById("error");
-  const totalEl = document.getElementById("totalHours"); // ←これが抜けてると止まる！
+  const totalEl = document.getElementById("totalHours");
   errorEl.textContent = ""; // 一旦リセット
 
-  // --- ① 開始時刻＝終了時刻 のチェック ---
-  const invalids = [];
-  document.querySelectorAll('.rowWrapper').forEach((w, idx) => {
-    const times = w.querySelectorAll('input[type=time]');
-    const sVal = times[0].value;
-    const eVal = times[1].value;
-    if (sVal && eVal && sVal === eVal) {
-      invalids.push(idx + 1);
-    }
-  });
-
-  if (invalids.length > 0) {
-    errorEl.textContent = `⚠ 同じ開始・終了時刻の項目があります（#${invalids.join(', ')}）`;
+  // --- 空き時間チェック ---
+  const hasEmpty = segments.some(s => s.name === '空き');
+  if (hasEmpty) {
+    errorEl.textContent = "⚠ 空き時間があります。24時間すべて埋めてください。";
   }
 
-  // --- ② 合計時間チェック（24時間ぴったり以外は警告） ---
+  // --- 合計時間チェック（24hぴったりかどうか） ---
   const diff = Math.abs(total - 24);
-  if (diff > 0.01) { // ±0.01h 誤差許容
+  if (diff > 0.01) {
     const msg = total < 24
-      ? `⚠ 合計時間が24時間に足りません！ (${total.toFixed(2)}h)`
-      : `⚠ 合計時間が24時間を超えています！ (${total.toFixed(2)}h)`;
+      ? `⚠ 合計時間が24時間に足りません (${total.toFixed(2)}h)`
+      : `⚠ 合計時間が24時間を超えています (${total.toFixed(2)}h)`;
     errorEl.textContent += (errorEl.textContent ? "／" : "") + msg;
   }
 
-  // --- 合計時間表示更新 ---
+  // 合計時間表示
   totalEl.textContent = total.toFixed(2);
 
-  // --- グラフは常に更新 ---
-  const segments = buildFullDaySegments(data);
+  // --- グラフ更新（空き時間だけ黒） ---
   const labels = segments.map(s=>s.name);
   const values = segments.map(s=>s.hours);
-  const colors = segments.map(s=>s.color);
+  const colors = segments.map(s => s.name === '空き' ? 'black' : s.color); // 空きだけ黒
 
   if(chart) chart.destroy();
   const ctx = document.getElementById('pieChart').getContext('2d');
-
   chart = new Chart(ctx,{
     type:'pie',
     data:{labels,datasets:[{data:values,backgroundColor:colors}]},
     options:{responsive:true,plugins:{legend:{display:false}}}
   });
 
+  // 凡例表示
   const legend=document.getElementById('legend');
   legend.innerHTML='';
   segments.forEach((s,i)=>{
     const row=document.createElement('div');
-    row.innerHTML=`<span class='colorbox' style='background:${s.color}'></span> ${s.start.toFixed(2)}〜${s.end.toFixed(2)} — ${s.name} (${s.hours.toFixed(2)}h)`;
+    row.innerHTML=`<span class='colorbox' style='background:${s.name === '空き' ? 'black' : s.color}'></span> ${s.start.toFixed(2)}〜${s.end.toFixed(2)} — ${s.name} (${s.hours.toFixed(2)}h)`;
     legend.appendChild(row);
   });
 }
+
 
 
 
@@ -333,6 +326,7 @@ updateChart();
 </script>
 </body>
 </html>
+
 
 
 
