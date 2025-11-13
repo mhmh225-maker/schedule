@@ -200,7 +200,9 @@ function getColor(i){ return `hsl(${(i*47)%360} 70% 55%)`; }
 function updateChart(){
   const data = collect();
   const total = data.reduce((a,b)=>a+b.hours,0);
+
   const errorEl = document.getElementById("error");
+  const totalEl = document.getElementById("totalHours"); // ←これが抜けてると止まる！
   errorEl.textContent = ""; // 一旦リセット
 
   // --- ① 開始時刻＝終了時刻 のチェック ---
@@ -230,10 +232,7 @@ function updateChart(){
   // --- 合計時間表示更新 ---
   totalEl.textContent = total.toFixed(2);
 
-  // --- エラーがある場合はチャート更新をスキップ ---
-  if (invalids.length > 0 || diff > 0.01) return;
-
-  // --- グラフ更新 ---
+  // --- グラフは常に更新 ---
   const segments = buildFullDaySegments(data);
   const labels = segments.map(s=>s.name);
   const values = segments.map(s=>s.hours);
@@ -248,13 +247,15 @@ function updateChart(){
     options:{responsive:true,plugins:{legend:{display:false}}}
   });
 
-  const legend=document.getElementById('legend'); legend.innerHTML='';
+  const legend=document.getElementById('legend');
+  legend.innerHTML='';
   segments.forEach((s,i)=>{
     const row=document.createElement('div');
     row.innerHTML=`<span class='colorbox' style='background:${s.color}'></span> ${s.start.toFixed(2)}〜${s.end.toFixed(2)} — ${s.name} (${s.hours.toFixed(2)}h)`;
     legend.appendChild(row);
   });
 }
+
 
 
 function addRowAtBottom(){
