@@ -186,11 +186,11 @@ function buildFullDaySegments(items){
   intervals.sort((a,b)=>a.start-b.start);
   const full=[]; let cursor=0;
   intervals.forEach(it=>{
-    if(it.start>cursor) full.push({name:'空き',start:cursor,end:it.start,hours:it.start-cursor,memo:'',color:'#e0e0e0'});
+    if(it.start>cursor) full.push({name:'未入力',start:cursor,end:it.start,hours:it.start-cursor,memo:'',color:'#e0e0e0'});
     full.push({name:it.name,start:it.start,end:it.end,hours:it.end-it.start,memo:it.memo,color:it.color});
     cursor=it.end;
   });
-  if(cursor<24) full.push({name:'空き',start:cursor,end:24,hours:24-cursor,memo:'',color:'#e0e0e0'});
+  if(cursor<24) full.push({name:'未入力',start:cursor,end:24,hours:24-cursor,memo:'',color:'#e0e0e0'});
   return full;
 }
 
@@ -207,7 +207,7 @@ function updateChart(){
   errorEl.textContent = "";
 
   // --- 空き時間チェック ---
-  const hasEmpty = segments.some(s => s.name === '空き');
+  const hasEmpty = segments.some(s => s.name === '未入力');
   if (hasEmpty) {
     errorEl.textContent = "⚠ 未入力の時間があります。24時間すべて埋めてください。";
   }
@@ -327,6 +327,7 @@ updateChart();
 </script>
 </body>
 </html>
+
 
 
 
