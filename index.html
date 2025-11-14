@@ -209,17 +209,17 @@ function updateChart(){
   // --- 空き時間チェック ---
   const hasEmpty = segments.some(s => s.name === '空き');
   if (hasEmpty) {
-    errorEl.textContent = "⚠ 空き時間があります。24時間すべて埋めてください。";
+    errorEl.textContent = "⚠ 未入力の時間があります。24時間すべて埋めてください。";
   }
 
-  // --- 合計時間チェック（空き時間除外） ---
-  const diff = Math.abs(totalUserTime - 24);
-  if (diff > 0.01) {
-    const msg = totalUserTime < 24
-      ? `⚠ 合計時間が24時間に足りません (${totalUserTime.toFixed(2)}h)`
-      : `⚠ 合計時間が24時間を超えています (${totalUserTime.toFixed(2)}h)`;
-    errorEl.textContent += (errorEl.textContent ? "／" : "") + msg;
-  }
+ // --- 合計時間チェック（空き時間除外） ---
+const diff = Math.abs(totalUserTime - 24);
+if (diff > 0.01) {
+  const msg = totalUserTime < 24
+    ? `⚠ 合計時間が24時間に足りません`
+    : `⚠ 合計時間が24時間を超えています`;
+  errorEl.textContent += (errorEl.textContent ? "／" : "") + msg;
+}
 
   totalEl.textContent = totalUserTime.toFixed(2);
 
@@ -297,7 +297,7 @@ document.getElementById('sendBtn').addEventListener('click', async ()=>{
 
   // 🚫 合計が24時間ぴったりでないと送信できない
   if (Math.abs(total - 24) > 0.01) { // ±0.01 誤差許容
-    alert(`合計時間が24時間ぴったりではありません！（現在: ${total.toFixed(2)}h）`);
+    alert("合計時間が24時間ぴったりではありません！");
     return;
   }
 
@@ -311,7 +311,7 @@ document.getElementById('sendBtn').addEventListener('click', async ()=>{
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify(payload)
     });
-    alert("送信しました！ご回答ありがとうございました！");
+    alert("送信しました。ご回答ありがとうございました！");
   }catch(e){ 
     alert("送信エラー: "+e); 
   }
@@ -319,12 +319,13 @@ document.getElementById('sendBtn').addEventListener('click', async ()=>{
 
 
 // 初期サンプル
-createRow('睡眠','00:00','08:00','ぐっすり');
-createRow('学習','08:00','14:00','授業');
-createRow('自由時間','14:00','24:00','趣味');
+createRow('睡眠','00:00','08:00','(回答参考例)休みの日だからと言って長くは寝ずに、いつもの時間に起きるようにしています。');
+createRow('散歩','08:00','9:00','(回答参考例)少し歩いたところにある広い公園で軽くストレッチをします。');
+createRow('自由時間','9:00','11:00','(回答参考例)趣味の音楽鑑賞や映画鑑賞をします。');
 updateChart();
 
 </script>
 </body>
 </html>
+
 
