@@ -226,7 +226,7 @@ if (diff > 0.01) {
   // --- グラフの色設定（空き時間だけグレー） ---
   const labels = segments.map(s=>s.name);
   const values = segments.map(s=>s.hours);
-  const colors = segments.map(s => s.name === '空き' ? '#999' : s.color);
+  const colors = segments.map(s => s.name === '未入力' ? '#999' : s.color);
 
   if(chart) chart.destroy();
   const ctx = document.getElementById('pieChart').getContext('2d');
@@ -242,7 +242,7 @@ if (diff > 0.01) {
   segments.forEach((s,i)=>{
     const box = document.createElement('span');
     box.className = 'colorbox';
-    box.style.background = s.name === '空き' ? '#999' : s.color;
+    box.style.background = s.name === '未入力' ? '#999' : s.color;
 
     const row=document.createElement('div');
     row.appendChild(box);
@@ -327,6 +327,7 @@ updateChart();
 </script>
 </body>
 </html>
+
 
 
 
