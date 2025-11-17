@@ -216,7 +216,6 @@ function updateChart(){
 const diff = Math.abs(totalUserTime - 24);
 if (diff > 0.01) {
   const msg = totalUserTime < 24
-    ? `⚠ 合計時間が24時間に足りません`
     : `⚠ 合計時間が24時間を超えています`;
   errorEl.textContent += (errorEl.textContent ? "／" : "") + msg;
 }
@@ -327,6 +326,7 @@ updateChart();
 </script>
 </body>
 </html>
+
 
 
 
