@@ -213,11 +213,8 @@ function updateChart(){
   }
 
  // --- 合計時間チェック（空き時間除外） ---
-const diff = Math.abs(totalUserTime - 24);
-if (diff > 0.01) {
-  const msg = totalUserTime < 24
-    : `⚠ 合計時間が24時間を超えています`;
-  errorEl.textContent += (errorEl.textContent ? "／" : "") + msg;
+if (totalUserTime > 24) {
+  errorEl.textContent += (errorEl.textContent ? "／" : "") + "⚠ 合計時間が24時間を超えています";
 }
 
   totalEl.textContent = totalUserTime.toFixed(2);
